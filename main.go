@@ -98,6 +98,7 @@ func ProcessDocument(filepath string) (doc *ArchiveDoc, err error) {
 
 	// get file stats
 	file, err := os.Open(filepath)
+	defer file.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +108,6 @@ func ProcessDocument(filepath string) (doc *ArchiveDoc, err error) {
 	}
 	fileSize := fi.Size()
 	modTime := fi.ModTime()
-	file.Close()
 
 	// try to parse file time
 	var year, month, day, hour, minute, second int
@@ -224,7 +224,15 @@ func DocContent(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		log.Printf("Requesting unknown document: %v", docId)
 		fmt.Fprintf(w, "Requesting unknown document: %v", docId)
 	}
+	in, err := os.Open(prestoredDoc.FilePath)
+    if err != nil {
+        return
+    }
+    defer in.Close()
 
+	if _, err = io.Copy(w, in); err != nil {
+        log.Printf("Error transfering document: %v", prestoredDoc.FilePath)
+    }
 }
 
 func DocThumbnail(ctx context.Context, w http.ResponseWriter, r *http.Request) {
